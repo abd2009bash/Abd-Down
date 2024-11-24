@@ -1,0 +1,51 @@
+name: Build Android App
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # الخطوة الأولى: سحب الكود من المستودع
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # الخطوة الثانية: إعداد Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # استخدم إصدار Python أقل من 3.12
+
+      # الخطوة الثالثة: تثبيت التبعيات
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip build-essential git
+          python -m pip install --upgrade pip setuptools
+          sudo apt-get install -y python3-tk python3-distutils
+          pip install buildozer
+
+      # الخطوة الرابعة: تثبيت Java وAndroid SDK/NDK
+      - name: Install Java and Android SDK
+        run: |
+          sudo apt install -y openjdk-11-jdk
+          mkdir -p $HOME/.android/cmdline-tools/latest/bin
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d $HOME/.android/cmdline-tools/latest/
+          rm cmdline-tools.zip
+          export PATH=$PATH:$HOME/.android/cmdline-tools/latest/bin
+          yes | sdkmanager --licenses
+          yes | sdkmanager --install "platforms;android-31" "build-tools;31.0.0" "ndk;23.1.7779620"
+
+      # الخطوة الخامسة: تشغيل Buildozer لبناء التطبيق
+      - name: Build APK
+        run: |
+          export PATH=$PATH:$HOME/.android/cmdline-tools/latest/bin
+          buildozer -v android debug
